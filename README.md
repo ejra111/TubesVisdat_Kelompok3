@@ -2,7 +2,7 @@
 
 Dashboard ini memvisualisasikan analisis distribusi konten Netflix (Movie & TV Show), negara produksi, dan tren rilis tahunan berdasarkan dataset Netflix dari Kaggle yang telah dibersihkan ke format JSON.
 
-🌐 Demo: https://nama-kelompok.vercel.app
+🌐 Demo: https://kelompok3-lovat.vercel.app/
 
 ---
 
@@ -35,16 +35,6 @@ Dashboard ini memvisualisasikan analisis distribusi konten Netflix (Movie & TV S
 Buka `index.html` langsung di browser  
 atau gunakan **Live Server (VS Code)**
 
-### Jalur B (Server)
-
-```bash
-npm install
-npm start
-# Buka http://localhost:3000
-## Teknologi
-- Chart.js (visualisasi)
-- HTML + CSS + JavaScript
-- Vercel (deployment)
 
 ## Anggota
 - Naufal Thafhan (103012300284)

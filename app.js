@@ -64,8 +64,14 @@ function renderDashboard(filterValue) {
         else if (d.type === "TV Show") tvCount++;
 
         // Hitung Negara (Jika tidak kosong)
-        if (d.country) {
-            countryCount[d.country] = (countryCount[d.country] || 0) + 1;
+ if (d.country) {
+            d.country.split(',').forEach(country => {
+                country = country.trim();
+                if (country !== '') {
+                    countryCount[country] =
+                        (countryCount[country] || 0) + 1;
+                }
+            });
         }
     });
 
@@ -79,16 +85,26 @@ function renderDashboard(filterValue) {
     animateValue("kpiCountry", 0, totalCountries, 1000);
 
     // Olah Data Top 5 Negara
-    const sortedCountries = Object.entries(countryCount).sort((a, b) => b - a).slice(0, 5);
-    const countryLabels = sortedCountries.map(item => item);
-    const countryData = sortedCountries.map(item => item[7]);
+    const sortedCountries = Object.entries(countryCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
 
-    // Olah Data Line Chart (Tren Waktu) -> Selalu gunakan data asli (netflixData) agar garis tren tidak hilang
+    const countryLabels = sortedCountries.map(item => item[0]);
+    const countryData = sortedCountries.map(item => item[1]);
+
+    console.log("Top 5 Negara:", sortedCountries);
+
+    // Data Tren Tahun
     const yearCount = {};
+
     netflixData.forEach(d => {
-        if(d.release_year) yearCount[d.release_year] = (yearCount[d.release_year] || 0) + 1;
+        if (d.release_year) {
+            yearCount[d.release_year] =
+                (yearCount[d.release_year] || 0) + 1;
+        }
     });
-    const sortedYears = Object.keys(yearCount).sort();
+
+    const sortedYears = Object.keys(yearCount).sort((a, b) => a - b);
     const yearData = sortedYears.map(year => yearCount[year]);
 
     // D. Menggambar Grafik menggunakan Chart.js
@@ -116,29 +132,35 @@ function renderDashboard(filterValue) {
     });
 
     // Chart 2: Top 5 Negara (Horizontal Bar)
-    const ctxCountry = document.getElementById('countryChart').getContext('2d');
-    countryChart = new Chart(ctxCountry, {
-        type: 'bar',
-        data: {
-            labels: countryLabels,
-            datasets: [{
-                label: 'Jumlah Konten',
-                data: countryData,
-                backgroundColor: '#E50914',
-                borderRadius: 4
-            }]
+const ctxCountry = document.getElementById('countryChart').getContext('2d');
+
+countryChart = new Chart(ctxCountry, {
+    type: 'bar',
+    data: {
+        labels: countryLabels,
+        datasets: [{
+            label: 'Jumlah Konten',
+            data: countryData,
+            backgroundColor: '#E50914',
+            borderRadius: 5
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
         },
-        options: {
-            indexAxis: 'y', 
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { grid: { display: false } }, // Menghilangkan grid vertikal untuk decluttering
-                y: { grid: { color: '#eaeaea' } }
-            },
-            plugins: { legend: { display: false } }
+        scales: {
+            x: {
+                beginAtZero: true
+            }
         }
-    });
+    }
+});
 
     // Chart 3: Tren Rilis Tahun (Line Chart)
     const ctxYear = document.getElementById('yearChart').getContext('2d');

@@ -45,6 +45,9 @@ npm start
 - Chart.js (visualisasi)
 - HTML + CSS + JavaScript
 - Vercel (deployment)
+
 ## Anggota
 - Naufal Thafhan (103012300284)
-- Nama 2 (NIM)
+- Wa Ode Najwa Amalia	(103012300265)
+- Ezra Hafizh Raditya (103012330244) 
+- Muhammad Furqan Maulidi (103012330213)

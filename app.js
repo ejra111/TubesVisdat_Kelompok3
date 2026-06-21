@@ -5,28 +5,88 @@ let typeChart, countryChart, yearChart;
 async function loadDataset() {
     try {
         const response = await fetch('netflix_dataset_cleaned.json');
-        netflixData = await response.json(); 
-        
+        netflixData = await response.json();
+
         populateYearDropdown();
-        renderDashboard("All"); 
+        initCustomDropdown();
+        renderDashboard("All");
     } catch (error) {
         console.error("Gagal memuat dataset:", error);
         alert("Gagal memuat data. Pastikan file netflix_data.json ada dan dibuka lewat Live Server.");
     }
 }
 
-// 2. Mengisi Filter Dropdown Otomatis
+// 2. Mengisi Filter Dropdown Otomatis (select asli sebagai sumber data)
 function populateYearDropdown() {
     const yearFilter = document.getElementById("yearFilter");
     const uniqueYears = [...new Set(netflixData.map(item => item.release_year))]
                         .filter(year => year != null)
-                        .sort((a, b) => b - a); 
-    
+                        .sort((a, b) => b - a);
+
     uniqueYears.forEach(year => {
         const option = document.createElement("option");
         option.value = year;
         option.textContent = `Tahun ${year}`;
         yearFilter.appendChild(option);
+    });
+}
+
+// 2b. Bangun UI dropdown custom ala Netflix, disinkronkan dengan select asli
+function initCustomDropdown() {
+    const wrapper = document.getElementById("customSelect");
+    const trigger = document.getElementById("selectTrigger");
+    const optionsList = document.getElementById("selectOptions");
+    const selectedLabel = document.getElementById("selectedLabel");
+    const nativeSelect = document.getElementById("yearFilter");
+
+    // Generate opsi custom dari opsi select asli
+    optionsList.innerHTML = "";
+    Array.from(nativeSelect.options).forEach(opt => {
+        const li = document.createElement("li");
+        li.textContent = opt.textContent;
+        li.dataset.value = opt.value;
+        li.setAttribute("role", "option");
+        if (opt.value === nativeSelect.value) li.classList.add("selected");
+
+        li.addEventListener("click", () => {
+            nativeSelect.value = opt.value;
+            selectedLabel.textContent = opt.textContent;
+
+            optionsList.querySelectorAll("li").forEach(item => item.classList.remove("selected"));
+            li.classList.add("selected");
+
+            closeDropdown();
+
+            // Trigger event 'change' supaya listener lama di bawah tetap jalan
+            nativeSelect.dispatchEvent(new Event("change"));
+        });
+
+        optionsList.appendChild(li);
+    });
+
+    function openDropdown() {
+        wrapper.classList.add("open");
+        trigger.setAttribute("aria-expanded", "true");
+    }
+
+    function closeDropdown() {
+        wrapper.classList.remove("open");
+        trigger.setAttribute("aria-expanded", "false");
+    }
+
+    trigger.addEventListener("click", (e) => {
+        e.stopPropagation();
+        wrapper.classList.contains("open") ? closeDropdown() : openDropdown();
+    });
+
+    // Tutup saat klik di luar dropdown
+    document.addEventListener("click", (e) => {
+        if (!wrapper.contains(e.target)) closeDropdown();
+    });
+
+    // Tutup dengan tombol Escape
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeDropdown();
     });
 }
 
@@ -54,7 +114,7 @@ function renderDashboard(filterValue) {
     }
 
     // B. Olah Data untuk KPI dan Charts
-    let movieCount = 0; 
+    let movieCount = 0;
     let tvCount = 0;
     const countryCount = {};
 
@@ -64,7 +124,7 @@ function renderDashboard(filterValue) {
         else if (d.type === "TV Show") tvCount++;
 
         // Hitung Negara (Jika tidak kosong)
- if (d.country) {
+        if (d.country) {
             d.country.split(',').forEach(country => {
                 country = country.trim();
                 if (country !== '') {
@@ -84,6 +144,12 @@ function renderDashboard(filterValue) {
     animateValue("kpiTv", 0, tvCount, 1000);
     animateValue("kpiCountry", 0, totalCountries, 1000);
 
+    // C.1 Persentase untuk legend donut
+    const moviePct = totalContent > 0 ? ((movieCount / totalContent) * 100).toFixed(1) : "0.0";
+    const tvPct = totalContent > 0 ? ((tvCount / totalContent) * 100).toFixed(1) : "0.0";
+    document.getElementById("moviePct").textContent = `${moviePct}%`;
+    document.getElementById("tvPct").textContent = `${tvPct}%`;
+
     // Olah Data Top 5 Negara
     const sortedCountries = Object.entries(countryCount)
         .sort((a, b) => b[1] - a[1])
@@ -91,8 +157,6 @@ function renderDashboard(filterValue) {
 
     const countryLabels = sortedCountries.map(item => item[0]);
     const countryData = sortedCountries.map(item => item[1]);
-
-    console.log("Top 5 Negara:", sortedCountries);
 
     // Data Tren Tahun
     const yearCount = {};
@@ -108,9 +172,12 @@ function renderDashboard(filterValue) {
     const yearData = sortedYears.map(year => yearCount[year]);
 
     // D. Menggambar Grafik menggunakan Chart.js
-    if(typeChart) typeChart.destroy();
-    if(countryChart) countryChart.destroy();
-    if(yearChart) yearChart.destroy();
+    if (typeChart) typeChart.destroy();
+    if (countryChart) countryChart.destroy();
+    if (yearChart) yearChart.destroy();
+
+    const gridColor = "rgba(255,255,255,0.07)";
+    const tickColor = "#9a9a9a";
 
     // Chart 1: Komposisi Tipe (Doughnut)
     const ctxType = document.getElementById('typeChart').getContext('2d');
@@ -120,47 +187,61 @@ function renderDashboard(filterValue) {
             labels: ['Movie', 'TV Show'],
             datasets: [{
                 data: [movieCount, tvCount],
-                backgroundColor: ['#E50914', '#221F1F'], 
-                borderWidth: 0 // Menghilangkan grid/border yang tidak perlu
+                backgroundColor: ['#E50914', '#3a3a3a'],
+                borderColor: '#161616',
+                borderWidth: 4,
+                hoverOffset: 6
             }]
         },
-        options: { 
-            responsive: true, 
+        options: {
+            responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }
+            cutout: '68%',
+            plugins: {
+                legend: { display: false } // legend custom di HTML
+            }
         }
     });
 
     // Chart 2: Top 5 Negara (Horizontal Bar)
-const ctxCountry = document.getElementById('countryChart').getContext('2d');
-
-countryChart = new Chart(ctxCountry, {
-    type: 'bar',
-    data: {
-        labels: countryLabels,
-        datasets: [{
-            label: 'Jumlah Konten',
-            data: countryData,
-            backgroundColor: '#E50914',
-            borderRadius: 5
-        }]
-    },
-    options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
+    const ctxCountry = document.getElementById('countryChart').getContext('2d');
+    countryChart = new Chart(ctxCountry, {
+        type: 'bar',
+        data: {
+            labels: countryLabels,
+            datasets: [{
+                label: 'Jumlah Konten',
+                data: countryData,
+                backgroundColor: '#E50914',
+                borderRadius: 4,
+                barThickness: 22
+            }]
         },
-        scales: {
-            x: {
-                beginAtZero: true
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1f1f1f',
+                    titleColor: '#fff',
+                    bodyColor: '#fff'
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: { color: gridColor },
+                    ticks: { color: tickColor }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { color: '#e5e5e5', font: { weight: '500' } }
+                }
             }
         }
-    }
-});
+    });
 
     // Chart 3: Tren Rilis Tahun (Line Chart)
     const ctxYear = document.getElementById('yearChart').getContext('2d');
@@ -172,21 +253,35 @@ countryChart = new Chart(ctxCountry, {
                 label: 'Rilis Konten Baru',
                 data: yearData,
                 borderColor: '#E50914',
-                backgroundColor: 'rgba(229, 9, 20, 0.1)',
+                backgroundColor: 'rgba(229, 9, 20, 0.18)',
                 borderWidth: 2,
-                fill: true, 
+                fill: true,
                 tension: 0.3,
-                pointRadius: 2
+                pointRadius: 2,
+                pointBackgroundColor: '#E50914'
             }]
         },
-        options: { 
-            responsive: true, 
+        options: {
+            responsive: true,
             maintainAspectRatio: false,
-            scales: {
-                x: { grid: { display: false } }, // Decluttering grid x
-                y: { grid: { color: '#eaeaea' } }
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1f1f1f',
+                    titleColor: '#fff',
+                    bodyColor: '#fff'
+                }
             },
-            plugins: { legend: { display: false } }
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: tickColor, maxRotation: 0, autoSkip: true }
+                },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: { color: tickColor }
+                }
+            }
         }
     });
 }
@@ -194,6 +289,6 @@ countryChart = new Chart(ctxCountry, {
 // 5. Event Listeners
 window.onload = loadDataset;
 
-document.getElementById("yearFilter").addEventListener("change", function(e) {
+document.getElementById("yearFilter").addEventListener("change", function (e) {
     renderDashboard(e.target.value);
 });

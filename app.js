@@ -1,6 +1,109 @@
 let netflixData = [];
 let typeChart, countryChart, yearChart;
 
+// 0a. Sintesis efek suara intro (Web Audio API, bukan file/sample berhak cipta)
+function playIntroSound() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+
+        // Browser modern memblokir autoplay audio sebelum ada interaksi pengguna.
+        // Jika context tersuspend, coba resume begitu pengguna pertama kali klik/keydown.
+        if (ctx.state === 'suspended') {
+            const resume = () => {
+                ctx.resume();
+                document.removeEventListener('click', resume);
+                document.removeEventListener('keydown', resume);
+            };
+            document.addEventListener('click', resume, { once: true });
+            document.addEventListener('keydown', resume, { once: true });
+        }
+
+        const now = ctx.currentTime;
+
+        // Bagian 1: swell bass naik, mengiringi batang merah yang menyatu (~0 - 1.5s)
+        const swellOsc = ctx.createOscillator();
+        const swellGain = ctx.createGain();
+        swellOsc.type = 'sine';
+        swellOsc.frequency.setValueAtTime(70, now);
+        swellOsc.frequency.exponentialRampToValueAtTime(210, now + 1.4);
+        swellGain.gain.setValueAtTime(0.0001, now);
+        swellGain.gain.exponentialRampToValueAtTime(0.22, now + 1.3);
+        swellGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.55);
+        swellOsc.connect(swellGain).connect(ctx.destination);
+        swellOsc.start(now);
+        swellOsc.stop(now + 1.6);
+
+        // Bagian 2: hentakan rendah tepat saat flash menyala (~2.15s)
+        const hitOsc = ctx.createOscillator();
+        const hitGain = ctx.createGain();
+        hitOsc.type = 'sine';
+        hitOsc.frequency.setValueAtTime(160, now + 2.15);
+        hitOsc.frequency.exponentialRampToValueAtTime(38, now + 2.45);
+        hitGain.gain.setValueAtTime(0.0001, now + 2.15);
+        hitGain.gain.exponentialRampToValueAtTime(0.55, now + 2.17);
+        hitGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.65);
+        hitOsc.connect(hitGain).connect(ctx.destination);
+        hitOsc.start(now + 2.15);
+        hitOsc.stop(now + 2.7);
+
+        // Lapisan tekstur "impact" pakai white noise singkat, disaring lowpass
+        const bufferSize = Math.floor(ctx.sampleRate * 0.3);
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = 'lowpass';
+        noiseFilter.frequency.value = 1100;
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.16, now + 2.15);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.45);
+        noise.connect(noiseFilter).connect(noiseGain).connect(ctx.destination);
+        noise.start(now + 2.15);
+    } catch (error) {
+        console.warn('Efek suara intro tidak dapat diputar:', error);
+    }
+}
+
+// 0. Intro pembuka ala Netflix - jalan duluan, tidak menunggu dataset
+function initIntro() {
+    const intro = document.getElementById('netflixIntro');
+    const skipBtn = document.getElementById('skipIntro');
+    if (!intro) return;
+
+    document.body.classList.add('intro-active');
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const totalDuration = prefersReducedMotion ? 0 : 4200; // ms, beri waktu baca teks judul sebelum fade
+
+    if (!prefersReducedMotion) {
+        playIntroSound();
+    }
+
+    let finished = false;
+    const endIntro = () => {
+        if (finished) return;
+        finished = true;
+        intro.classList.add('intro-hidden');
+        document.body.classList.remove('intro-active');
+        setTimeout(() => intro.remove(), 650); // tunggu transisi fade selesai baru dibuang dari DOM
+    };
+
+    const timer = setTimeout(endIntro, totalDuration);
+
+    skipBtn.addEventListener('click', () => {
+        clearTimeout(timer);
+        endIntro();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initIntro);
+
 // 1. Mengambil Dataset JSON (Asinkron)
 async function loadDataset() {
     try {

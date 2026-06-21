@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Analisis Katalog Netflix</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Chart.js dari CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header & Sumber Data -->
+        <header>
+            <h1>Dashboard Analisis Katalog Netflix</h1>
+            <p class="source-info">Sumber Data: <a href="https://www.kaggle.com/datasets/shivamb/netflix-shows" target="_blank">Kaggle - Netflix Movies and TV Shows</a></p>
+            
+            <div class="filter-container">
+                <label for="yearFilter"><strong>Eksplorasi Tahun Rilis:</strong></label>
+                <select id="yearFilter">
+                    <option value="All">Semua Tahun</option>
+                    <!-- Opsi tahun akan di-generate otomatis oleh JavaScript -->
+                </select>
+            </div>
+        </header>
+
+        <!-- Baris KPI (Key Performance Indicators) -->
+        <div class="kpi-grid">
+            <div class="kpi-card primary-kpi">
+                <h3 id="kpiTotal">0</h3>
+                <p>Total Konten</p>
+            </div>
+            <div class="kpi-card">
+                <h3 id="kpiMovie">0</h3>
+                <p>Total Movie</p>
+            </div>
+            <div class="kpi-card">
+                <h3 id="kpiTv">0</h3>
+                <p>Total TV Show</p>
+            </div>
+            <div class="kpi-card">
+                <h3 id="kpiCountry">0</h3>
+                <p>Total Negara</p>
+            </div>
+        </div>
+
+        <!-- Baris Grafik (Charts Grid) -->
+        <div class="charts-grid">
+            <!-- Menjawab Pertanyaan 1 -->
+            <div class="chart-card">
+                <h2>Komposisi Movie vs TV Show</h2>
+                <div class="canvas-container">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Menjawab Pertanyaan 2 -->
+            <div class="chart-card">
+                <h2>Top 5 Negara Produksi Terbanyak</h2>
+                <div class="canvas-container">
+                    <canvas id="countryChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Menjawab Pertanyaan 3 -->
+            <div class="chart-card full-width">
+                <h2>Tren Pertumbuhan Konten (Sepanjang Masa)</h2>
+                <div class="canvas-container">
+                    <canvas id="yearChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
